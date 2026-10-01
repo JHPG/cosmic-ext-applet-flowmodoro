@@ -1,0 +1,40 @@
+{
+  "id": "io.github.jhpg.cosmic-ext-applet-flowmodoro",
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "25.08",
+  "sdk": "org.freedesktop.Sdk",
+  "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
+  "command": "cosmic-ext-applet-flowmodoro",
+  "finish-args": [
+    "--socket=wayland",
+    "--device=dri",
+    "--filesystem=xdg-config/cosmic:ro",
+    "--talk-name=com.system76.CosmicSettingsDaemon",
+    "--talk-name=com.system76.CosmicSettingsDaemon.*",
+    "--talk-name=org.freedesktop.Notifications"
+  ],
+  "build-options": {
+    "append-path": "/usr/lib/sdk/rust-stable/bin",
+    "env": {
+      "CARGO_HOME": "/run/build/cosmic-ext-applet-flowmodoro/cargo"
+    }
+  },
+  "modules": [
+    {
+      "name": "cosmic-ext-applet-flowmodoro",
+      "buildsystem": "simple",
+      "build-commands": [
+        "cargo --offline fetch --manifest-path Cargo.toml --verbose",
+        "cargo --offline build --release --verbose",
+        "install -Dm0755 target/release/cosmic-ext-applet-flowmodoro -t /app/bin/",
+        "install -Dm0644 data/io.github.jhpg.cosmic-ext-applet-flowmodoro.desktop -t /app/share/applications/",
+        "install -Dm0644 data/io.github.jhpg.cosmic-ext-applet-flowmodoro.metainfo.xml -t /app/share/metainfo/",
+        "install -Dm0644 data/io.github.jhpg.cosmic-ext-applet-flowmodoro-symbolic.svg -t /app/share/icons/hicolor/scalable/apps/"
+      ],
+      "sources": [
+        { "type": "dir", "path": ".." },
+        "cargo-sources.json"
+      ]
+    }
+  ]
+}

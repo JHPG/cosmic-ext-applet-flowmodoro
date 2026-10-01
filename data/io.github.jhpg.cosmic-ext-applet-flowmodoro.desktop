@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Flowmodoro
+Comment=Focus as long as you like, then break for a fifth of that time
+Comment[pt_BR]=Foque o quanto quiser e depois descanse um quinto desse tempo
+Type=Application
+Exec=cosmic-ext-applet-flowmodoro
+Icon=io.github.jhpg.cosmic-ext-applet-flowmodoro-symbolic
+Terminal=false
+Categories=Utility;
+Keywords=Flowmodoro;Pomodoro;Timer;Focus;Productivity;
+Keywords[pt_BR]=Flowmodoro;Pomodoro;Temporizador;Foco;Produtividade;
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true

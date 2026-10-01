@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.jhpg.cosmic-ext-applet-flowmodoro</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <project_group>COSMIC</project_group>
+  <name>Flowmodoro</name>
+  <summary>Flowmodoro focus timer for the COSMIC panel</summary>
+  <summary xml:lang="pt-BR">Temporizador Flowmodoro para o painel do COSMIC</summary>
+  <developer id="io.github.jhpg">
+    <name>Jorge Garcia</name>
+  </developer>
+  <description>
+    <p>
+      A Flowmodoro timer: instead of fixed Pomodoro blocks, you focus for as long as the
+      flow lasts, then take a break that is one fifth of the time you focused.
+    </p>
+    <p xml:lang="pt-BR">
+      Um temporizador Flowmodoro: em vez de blocos fixos como no Pomodoro, você foca enquanto
+      durar o fluxo e depois faz uma pausa de um quinto do tempo que focou.
+    </p>
+    <ul>
+      <li>Panel icon shows the elapsed focus time or the remaining break</li>
+      <li xml:lang="pt-BR">O painel mostra o tempo de foco ou o que falta da pausa</li>
+      <li>Popup with the accrued break and one-click start, rest and reset</li>
+      <li xml:lang="pt-BR">Popup com a pausa acumulada e botões para iniciar, descansar e resetar</li>
+      <li>Forgot to start the timer? Click the minutes or seconds to correct them</li>
+      <li xml:lang="pt-BR">Esqueceu de iniciar? Clique nos minutos ou segundos para corrigir</li>
+      <li>Notifications when a break starts and ends</li>
+      <li xml:lang="pt-BR">Notificações no início e no fim da pausa</li>
+      <li>Stays in sync across the panels of all your monitors</li>
+      <li xml:lang="pt-BR">Sincronizado entre os painéis de todos os monitores</li>
+    </ul>
+    <p>Available in English and Brazilian Portuguese.</p>
+    <p xml:lang="pt-BR">Disponível em inglês e português do Brasil.</p>
+  </description>
+  <launchable type="desktop-id">io.github.jhpg.cosmic-ext-applet-flowmodoro.desktop</launchable>
+  <icon type="stock">io.github.jhpg.cosmic-ext-applet-flowmodoro-symbolic</icon>
+  <url type="homepage">https://github.com/JHPG/cosmic-ext-applet-flowmodoro</url>
+  <url type="bugtracker">https://github.com/JHPG/cosmic-ext-applet-flowmodoro/issues</url>
+  <url type="vcs-browser">https://github.com/JHPG/cosmic-ext-applet-flowmodoro</url>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#fffffe</color>
+    <color type="primary" scheme_preference="dark">#2b2b2b</color>
+  </branding>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/JHPG/cosmic-ext-applet-flowmodoro/main/data/screenshot.png</image>
+      <caption>Flowmodoro popup during a focus session</caption>
+      <caption xml:lang="pt-BR">Popup do Flowmodoro durante uma sessão de foco</caption>
+    </screenshot>
+  </screenshots>
+  <provides>
+    <id>com.system76.CosmicApplet</id>
+    <binary>cosmic-ext-applet-flowmodoro</binary>
+  </provides>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>flowmodoro</keyword>
+    <keyword>pomodoro</keyword>
+    <keyword>timer</keyword>
+    <keyword>focus</keyword>
+  </keywords>
+  <releases>
+    <release version="0.1.0" date="2026-10-01">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

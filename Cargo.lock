@@ -929,7 +929,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmic-flowmodoro"
+name = "cosmic-ext-applet-flowmodoro"
 version = "0.1.0"
 dependencies = [
  "libcosmic",

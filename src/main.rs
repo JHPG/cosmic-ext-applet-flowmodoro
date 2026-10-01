@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // ponytail: fixed Flowmodoro ratio, make configurable if 1/5 doesn't fit
 const BREAK_RATIO: u32 = 5;
-const ICON: &str = "accessories-clock-symbolic";
+const ICON: &str = "io.github.jhpg.cosmic-ext-applet-flowmodoro-symbolic";
 static EDIT_ID: LazyLock<cosmic::iced::core::widget::Id> =
     LazyLock::new(|| cosmic::iced::core::widget::Id::new("edit"));
 
@@ -40,6 +40,80 @@ enum Message {
     EditCancel,
     Surface(cosmic::surface::Action<Message>),
     PopupClosed(Id),
+}
+
+/// UI strings. ponytail: plain struct per language; move to Fluent (i18n-embed)
+/// if outside translators start contributing.
+struct Tr {
+    ready: &'static str,
+    idle_hint: &'static str,
+    start: &'static str,
+    focus: &'static str,
+    earned: fn(&str) -> String,
+    reset: &'static str,
+    take_break: &'static str,
+    brk: &'static str,
+    rest: &'static str,
+    skip: &'static str,
+    back: &'static str,
+    break_started: fn(&str, &str) -> String,
+    break_over: &'static str,
+    break_over_body: &'static str,
+}
+
+const EN: Tr = Tr {
+    ready: "Ready",
+    idle_hint: "Focus as long as you like; break = focus ÷ 5",
+    start: "Start focus",
+    focus: "Focus",
+    earned: |b| format!("Break earned: {b}"),
+    reset: "Reset",
+    take_break: "Take a break",
+    brk: "Break",
+    rest: "Rest",
+    skip: "Skip break",
+    back: "Back to focus",
+    break_started: |f, b| format!("Focused {f} → {b} break"),
+    break_over: "Break over",
+    break_over_body: "Time to get back to focus",
+};
+
+const PT: Tr = Tr {
+    ready: "Pronto",
+    idle_hint: "Foque o quanto quiser; pausa = foco ÷ 5",
+    start: "Iniciar foco",
+    focus: "Foco",
+    earned: |b| format!("Pausa acumulada: {b}"),
+    reset: "Reset",
+    take_break: "Descansar",
+    brk: "Pausa",
+    rest: "Descanse",
+    skip: "Pular pausa",
+    back: "Voltar ao foco",
+    break_started: |f, b| format!("Foco {f} → pausa de {b}"),
+    break_over: "Pausa acabou",
+    break_over_body: "Hora de voltar ao foco",
+};
+
+/// Language from a POSIX locale ("pt_BR.UTF-8"); English otherwise.
+fn pick(locale: &str) -> &'static Tr {
+    if locale.starts_with("pt") {
+        &PT
+    } else {
+        &EN
+    }
+}
+
+fn tr() -> &'static Tr {
+    static T: LazyLock<&Tr> = LazyLock::new(|| {
+        let locale = ["LC_ALL", "LC_MESSAGES", "LANG"]
+            .iter()
+            .filter_map(|v| std::env::var(v).ok())
+            .find(|v| !v.is_empty())
+            .unwrap_or_default();
+        pick(&locale)
+    });
+    *T
 }
 
 fn break_for(focus: Duration) -> Duration {
@@ -83,10 +157,14 @@ fn set_part(elapsed: Duration, unit: u64, v: u64) -> Duration {
 // Panel runs one applet process per monitor; they share state through this file.
 // Missing file = Idle.
 fn state_path() -> PathBuf {
-    std::env::var_os("XDG_RUNTIME_DIR")
+    let mut dir = std::env::var_os("XDG_RUNTIME_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join("cosmic-flowmodoro")
+        .unwrap_or_else(std::env::temp_dir);
+    // inside Flatpak only $XDG_RUNTIME_DIR/app/<id> is shared between instances
+    if let Some(id) = std::env::var_os("FLATPAK_ID") {
+        dir = dir.join("app").join(id);
+    }
+    dir.join("flowmodoro")
 }
 
 fn encode(p: Phase) -> Option<String> {
@@ -155,7 +233,7 @@ impl cosmic::Application for Applet {
     type Executor = cosmic::executor::Default;
     type Flags = ();
     type Message = Message;
-    const APP_ID: &'static str = "com.github.cosmic-flowmodoro";
+    const APP_ID: &'static str = "io.github.jhpg.cosmic-ext-applet-flowmodoro";
 
     fn core(&self) -> &cosmic::Core {
         &self.core
@@ -226,17 +304,14 @@ impl cosmic::Application for Applet {
             (Message::TakeBreak, Phase::Focus(start)) => {
                 let focus = since(start, now);
                 let b = break_for(focus);
-                notify(
-                    "Pausa",
-                    &format!("Foco {} → pausa de {}", fmt(focus), fmt(b)),
-                );
+                notify(tr().brk, &(tr().break_started)(&fmt(focus), &fmt(b)));
                 Phase::Break(now + b)
             }
             (Message::Stop, _) => Phase::Idle,
             (Message::Tick, Phase::Break(end)) if now >= end => {
                 // every instance hits this; only the one whose delete succeeds notifies
                 if fs::remove_file(state_path()).is_ok() {
-                    notify("Pausa acabou", "Hora de voltar ao foco");
+                    notify(tr().break_over, tr().break_over_body);
                 }
                 self.phase = Phase::Idle;
                 return Task::none();
@@ -340,38 +415,39 @@ impl cosmic::Application for Applet {
 
 impl Applet {
     fn popup_view(&self) -> Element<'_, Message> {
+        let t = tr();
         let now = SystemTime::now();
         let (title, time, detail, buttons): (_, _, String, Vec<Element<_>>) = match self.phase {
             Phase::Idle => (
-                "Pronto",
+                t.ready,
                 Duration::ZERO,
-                "Foque o quanto quiser; pausa = foco ÷ 5".into(),
-                vec![widget::button::suggested("Iniciar foco")
+                t.idle_hint.into(),
+                vec![widget::button::suggested(t.start)
                     .on_press(Message::Start)
                     .into()],
             ),
             Phase::Focus(start) => (
-                "Foco",
+                t.focus,
                 since(start, now),
-                format!("Pausa acumulada: {}", fmt(break_for(since(start, now)))),
+                (t.earned)(&fmt(break_for(since(start, now)))),
                 vec![
-                    widget::button::standard("Reset")
+                    widget::button::standard(t.reset)
                         .on_press(Message::Stop)
                         .into(),
-                    widget::button::suggested("Descansar")
+                    widget::button::suggested(t.take_break)
                         .on_press(Message::TakeBreak)
                         .into(),
                 ],
             ),
             Phase::Break(end) => (
-                "Pausa",
+                t.brk,
                 since(now, end),
-                "Descanse".into(),
+                t.rest.into(),
                 vec![
-                    widget::button::standard("Pular pausa")
+                    widget::button::standard(t.skip)
                         .on_press(Message::Stop)
                         .into(),
-                    widget::button::suggested("Voltar ao foco")
+                    widget::button::suggested(t.back)
                         .on_press(Message::Start)
                         .into(),
                 ],
@@ -434,6 +510,14 @@ mod tests {
         );
         assert_eq!(fmt(Duration::from_secs(65)), "01:05");
         assert_eq!(fmt(Duration::from_secs(3725)), "1:02:05");
+    }
+
+    #[test]
+    fn language() {
+        assert_eq!(pick("pt_BR.UTF-8").focus, "Foco");
+        assert_eq!(pick("pt_PT").focus, "Foco");
+        assert_eq!(pick("en_US.UTF-8").focus, "Focus");
+        assert_eq!(pick("").focus, "Focus");
     }
 
     #[test]
