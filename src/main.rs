@@ -469,7 +469,7 @@ impl Applet {
                     .size(35.)
                     .line_height(cosmic::iced::widget::text::LineHeight::Absolute(52.0.into()))
                     .padding([0, 6])
-                    .width(Length::Fixed(84.))
+                    .width(Length::Fixed(56.))
                     .into(),
                 _ if editable => widget::button::custom(widget::text::title1(text))
                     .class(cosmic::theme::Button::Text)
