@@ -1,6 +1,6 @@
 [package]
 name = "cosmic-ext-applet-flowmodoro"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Flowmodoro focus timer applet for the COSMIC panel"
 license = "GPL-3.0-only"

@@ -89,6 +89,15 @@
     <keyword>focus</keyword>
   </keywords>
   <releases>
+    <release version="0.2.0" date="2026-10-01">
+      <description>
+        <ul>
+          <li>Report how much the break overran and let it end by hand</li>
+          <li>Spanish translation</li>
+          <li>Flow-wave icon</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-01">
       <description>
         <p>First release.</p>
