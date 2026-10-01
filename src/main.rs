@@ -465,7 +465,11 @@ impl Applet {
                     .id(EDIT_ID.clone())
                     .on_input(Message::EditInput)
                     .on_submit(|_| Message::EditConfirm)
-                    .width(Length::Fixed(64.))
+                    // match title1 (35px / 52px line) so the clock doesn't jump while editing
+                    .size(35.)
+                    .line_height(cosmic::iced::widget::text::LineHeight::Absolute(52.0.into()))
+                    .padding([0, 6])
+                    .width(Length::Fixed(84.))
                     .into(),
                 _ if editable => widget::button::custom(widget::text::title1(text))
                     .class(cosmic::theme::Button::Text)
