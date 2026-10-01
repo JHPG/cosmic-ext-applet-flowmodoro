@@ -50,6 +50,16 @@
       <caption>Flowmodoro popup during a focus session</caption>
       <caption xml:lang="pt-BR">Popup do Flowmodoro durante uma sessão de foco</caption>
     </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/JHPG/cosmic-ext-applet-flowmodoro/main/data/screenshot-edit.png</image>
+      <caption>Click the minutes or seconds to fix a timer you forgot to start</caption>
+      <caption xml:lang="pt-BR">Clique nos minutos ou segundos para corrigir um timer que esqueceu de iniciar</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/JHPG/cosmic-ext-applet-flowmodoro/main/data/screenshot-break.png</image>
+      <caption>Break countdown, one fifth of the focus time</caption>
+      <caption xml:lang="pt-BR">Contagem da pausa, um quinto do tempo de foco</caption>
+    </screenshot>
   </screenshots>
   <provides>
     <id>com.system76.CosmicApplet</id>
