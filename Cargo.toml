@@ -1,0 +1,15 @@
+[package]
+name = "cosmic-flowmodoro"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+notify-rust = "4.11"
+
+[dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic.git"
+features = ["applet", "tokio", "wayland", "winit"]
+
+[profile.release]
+lto = "thin"
+strip = true
