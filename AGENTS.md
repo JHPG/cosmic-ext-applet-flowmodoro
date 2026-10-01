@@ -8,6 +8,8 @@
 - A panel restart cycles every applet in the session, so mention it when reloading.
 - Strings: `Tr` in `src/main.rs` plus a `pick()` branch; keep `data/*.desktop` and
   `data/*.metainfo.xml` translations in sync when adding a language.
+- Keep `README.md` in sync: when a feature or substantial change lands, update the README in
+  the same pass (new behaviour, table rows, install steps, screenshots under `data/`).
 - The shared state file (`$XDG_RUNTIME_DIR/flowmodoro`, one process per monitor) plus the
   one-shot markers `flowmodoro.over` / `flowmodoro.late` are the cross-process protocol.
   A live check is possible without installing: run `target/release/<name>` by hand and poke

@@ -1,5 +1,7 @@
 # Flowmodoro for COSMIC
 
+<img src="data/io.github.jhpg.cosmic-ext-applet-flowmodoro.png" width="128" alt="Flowmodoro icon">
+
 A Flowmodoro timer applet for the
 [COSMIC](https://system76.com/cosmic) desktop panel.
 
@@ -7,7 +9,11 @@ Unlike Pomodoro's fixed 25-minute blocks, Flowmodoro lets you focus for as long 
 flow. When you stop, you earn a break of **one fifth** of the time you focused
 (50 min of focus → 10 min of break).
 
-![Flowmodoro popup](data/screenshot.png)
+## Screenshots
+
+| Focus | Fixing a timer you forgot to start | Break |
+|------|-----------------------------------|-------|
+| ![Flowmodoro popup during a focus session](data/screenshot.png) | ![Editing the time in the popup clock](data/screenshot-edit.png) | ![Break countdown](data/screenshot-break.png) |
 
 ## How it works
 
