@@ -80,34 +80,6 @@ just validate     # check the AppStream metainfo and desktop entry
 
 All code lives in [`src/main.rs`](src/main.rs). The break ratio is the `BREAK_RATIO` constant.
 
-## Publishing
-
-### GitHub
-
-1. Create the repository `JHPG/cosmic-ext-applet-flowmodoro` and push `main`.
-2. Add a screenshot of the popup as `data/screenshot.png` (the metainfo and this README link to
-   it), e.g. with `cosmic-screenshot`.
-3. Tag the release: `git tag v0.1.0 && git push --tags`, then create a GitHub release.
-
-### COSMIC Store
-
-Panel applets are not accepted on Flathub. They are distributed through the
-[COSMIC Flatpak repository](https://github.com/pop-os/cosmic-flatpak), which the COSMIC Store
-reads. The `<provides><id>com.system76.CosmicApplet</id></provides>` entry in the metainfo
-places the app in the Store's *Applets* section.
-
-1. Bump `version` in `Cargo.toml`, add a `<release>` entry in
-   `data/io.github.jhpg.cosmic-ext-applet-flowmodoro.metainfo.xml` and commit.
-2. Run `just validate`, then `just flatpak-sources` if `Cargo.lock` changed.
-3. Fork `pop-os/cosmic-flatpak` and add `app/io.github.jhpg.cosmic-ext-applet-flowmodoro/` with:
-   - `cargo-sources.json` (from `flatpak/`)
-   - the manifest from `flatpak/`, with the `dir` source replaced by the pinned commit:
-     ```json
-     { "type": "git", "url": "https://github.com/JHPG/cosmic-ext-applet-flowmodoro.git", "commit": "<sha>" }
-     ```
-4. Test with `just build io.github.jhpg.cosmic-ext-applet-flowmodoro` in that repository and open
-   a pull request.
-
 ## License
 
 [GPL-3.0-only](LICENSE)
