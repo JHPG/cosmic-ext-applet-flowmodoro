@@ -9,6 +9,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // ponytail: fixed Flowmodoro ratio, make configurable if 1/5 doesn't fit
 const BREAK_RATIO: u32 = 5;
+
+// ponytail: fixed 5-minute lateness nudge, make configurable if it gets annoying
+const LATE_NUDGE: Duration = Duration::from_secs(5 * 60);
 const ICON: &str = "io.github.jhpg.cosmic-ext-applet-flowmodoro-symbolic";
 static EDIT_ID: LazyLock<cosmic::iced::core::widget::Id> =
     LazyLock::new(|| cosmic::iced::core::widget::Id::new("edit"));
@@ -17,7 +20,7 @@ static EDIT_ID: LazyLock<cosmic::iced::core::widget::Id> =
 enum Phase {
     Idle,
     Focus(SystemTime),
-    Break(SystemTime), // break end
+    Break(SystemTime, SystemTime), // (start, end)
 }
 
 struct Applet {
@@ -53,12 +56,14 @@ struct Tr {
     reset: &'static str,
     take_break: &'static str,
     brk: &'static str,
-    rest: &'static str,
+    rest: fn(&str) -> String,
+    late: fn(&str) -> String,
     skip: &'static str,
-    back: &'static str,
     break_started: fn(&str, &str) -> String,
     break_over: &'static str,
     break_over_body: &'static str,
+    still_away: &'static str,
+    still_away_body: &'static str,
 }
 
 const EN: Tr = Tr {
@@ -70,12 +75,14 @@ const EN: Tr = Tr {
     reset: "Reset",
     take_break: "Take a break",
     brk: "Break",
-    rest: "Rest",
-    skip: "Skip break",
-    back: "Back to focus",
+    rest: |e| format!("Rest · {e} so far"),
+    late: |o| format!("Late by: {o}"),
+    skip: "End break",
     break_started: |f, b| format!("Focused {f} → {b} break"),
     break_over: "Break over",
     break_over_body: "Time to get back to focus",
+    still_away: "Still on break",
+    still_away_body: "The break ended 5 minutes ago",
 };
 
 const PT: Tr = Tr {
@@ -87,18 +94,41 @@ const PT: Tr = Tr {
     reset: "Reset",
     take_break: "Descansar",
     brk: "Pausa",
-    rest: "Descanse",
-    skip: "Pular pausa",
-    back: "Voltar ao foco",
+    rest: |e| format!("Descanse · {e} até agora"),
+    late: |o| format!("Atraso: {o}"),
+    skip: "Encerrar pausa",
     break_started: |f, b| format!("Foco {f} → pausa de {b}"),
     break_over: "Pausa acabou",
     break_over_body: "Hora de voltar ao foco",
+    still_away: "Ainda na pausa",
+    still_away_body: "A pausa acabou há 5 minutos",
 };
 
-/// Language from a POSIX locale ("pt_BR.UTF-8"); English otherwise.
+const ES: Tr = Tr {
+    ready: "Listo",
+    idle_hint: "Concéntrate todo el tiempo que quieras; descanso = concentración ÷ 5",
+    start: "Empezar a concentrarse",
+    focus: "Concentración",
+    earned: |b| format!("Descanso acumulado: {b}"),
+    reset: "Reiniciar",
+    take_break: "Descansar",
+    brk: "Descanso",
+    rest: |e| format!("Descanse · {e} hasta ahora"),
+    late: |o| format!("Retraso: {o}"),
+    skip: "Terminar el descanso",
+    break_started: |f, b| format!("Concentración {f} → descanso de {b}"),
+    break_over: "Descanso terminado",
+    break_over_body: "Es hora de volver a concentrarse",
+    still_away: "Todavía en descanso",
+    still_away_body: "El descanso terminó hace 5 minutos",
+};
+
+/// Language from a POSIX locale ("pt_BR.UTF-8", "es_ES.UTF-8"); English otherwise.
 fn pick(locale: &str) -> &'static Tr {
     if locale.starts_with("pt") {
         &PT
+    } else if locale.starts_with("es") {
+        &ES
     } else {
         &EN
     }
@@ -156,7 +186,8 @@ fn set_part(elapsed: Duration, unit: u64, v: u64) -> Duration {
 
 // Panel runs one applet process per monitor; they share state through this file.
 // Missing file = Idle.
-fn state_path() -> PathBuf {
+
+fn state_dir() -> PathBuf {
     let mut dir = std::env::var_os("XDG_RUNTIME_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(std::env::temp_dir);
@@ -164,7 +195,24 @@ fn state_path() -> PathBuf {
     if let Some(id) = std::env::var_os("FLATPAK_ID") {
         dir = dir.join("app").join(id);
     }
-    dir.join("flowmodoro")
+    dir
+}
+
+fn state_path() -> PathBuf {
+    state_dir().join("flowmodoro")
+}
+
+fn bell_path(kind: &str) -> PathBuf {
+    state_dir().join(format!("flowmodoro.{kind}"))
+}
+
+/// One-shot: only the instance that creates the marker notifies, so N monitors = 1 notification.
+fn bell(kind: &str) -> bool {
+    fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(bell_path(kind))
+        .is_ok()
 }
 
 fn encode(p: Phase) -> Option<String> {
@@ -172,19 +220,24 @@ fn encode(p: Phase) -> Option<String> {
     match p {
         Phase::Idle => None,
         Phase::Focus(t) => Some(format!("focus {}", ms(t))),
-        Phase::Break(t) => Some(format!("break {}", ms(t))),
+        Phase::Break(s, e) => Some(format!("break {} {}", ms(s), ms(e))),
     }
 }
 
 fn decode(s: &str) -> Phase {
-    let (kind, ms) = s.trim().split_once(' ').unwrap_or_default();
-    let Ok(ms) = ms.parse() else {
-        return Phase::Idle;
+    let at = |v: &str| {
+        v.parse()
+            .ok()
+            .map(|ms: u64| UNIX_EPOCH + Duration::from_millis(ms))
     };
-    let t = UNIX_EPOCH + Duration::from_millis(ms);
-    match kind {
-        "focus" => Phase::Focus(t),
-        "break" => Phase::Break(t),
+    let mut w = s.trim().split(' ');
+    match (
+        w.next().unwrap_or_default(),
+        w.next().and_then(at),
+        w.next().and_then(at),
+    ) {
+        ("focus", Some(t), None) => Phase::Focus(t),
+        ("break", Some(s), Some(e)) => Phase::Break(s, e),
         _ => Phase::Idle,
     }
 }
@@ -214,6 +267,14 @@ fn parse_part(s: &str) -> Option<u64> {
 
 fn since(t: SystemTime, now: SystemTime) -> Duration {
     now.duration_since(t).unwrap_or_default()
+}
+
+/// Remaining time while the break lasts, "+mm:ss" of overrun once it is over.
+fn break_clock(end: SystemTime, now: SystemTime) -> String {
+    match end.duration_since(now) {
+        Ok(rest) => fmt(rest),
+        Err(_) => format!("+{}", fmt(since(end, now))),
+    }
 }
 
 fn notify(summary: &str, body: &str) {
@@ -296,24 +357,30 @@ impl cosmic::Application for Applet {
                 let elapsed = match phase {
                     Phase::Idle => Duration::ZERO,
                     Phase::Focus(start) => since(start, now),
-                    Phase::Break(_) => return Task::none(),
+                    Phase::Break(..) => return Task::none(),
                 };
                 Phase::Focus(now - set_part(elapsed, unit, v))
             }
             (Message::Start, _) => Phase::Focus(now),
             (Message::TakeBreak, Phase::Focus(start)) => {
+                // new break: reset the one-shot markers left by the previous one
+                for kind in ["over", "late"] {
+                    drop(fs::remove_file(bell_path(kind)));
+                }
                 let focus = since(start, now);
                 let b = break_for(focus);
                 notify(tr().brk, &(tr().break_started)(&fmt(focus), &fmt(b)));
-                Phase::Break(now + b)
+                Phase::Break(now, now + b)
             }
             (Message::Stop, _) => Phase::Idle,
-            (Message::Tick, Phase::Break(end)) if now >= end => {
-                // every instance hits this; only the one whose delete succeeds notifies
-                if fs::remove_file(state_path()).is_ok() {
+            (Message::Tick, Phase::Break(_, end)) if now >= end => {
+                let over = since(end, now);
+                if bell("over") {
                     notify(tr().break_over, tr().break_over_body);
                 }
-                self.phase = Phase::Idle;
+                if over >= LATE_NUDGE && bell("late") {
+                    notify(tr().still_away, tr().still_away_body);
+                }
                 return Task::none();
             }
             _ => return Task::none(),
@@ -363,7 +430,7 @@ impl cosmic::Application for Applet {
                 return self.core.applet.autosize_window(icon).into();
             }
             Phase::Focus(start) => fmt(since(start, now)),
-            Phase::Break(end) => fmt(since(now, end)),
+            Phase::Break(_, end) => break_clock(end, now),
         };
         let applet = &self.core.applet;
         let (w, h) = applet.suggested_size(true);
@@ -439,22 +506,24 @@ impl Applet {
                         .into(),
                 ],
             ),
-            Phase::Break(end) => (
-                t.brk,
-                since(now, end),
-                t.rest.into(),
-                vec![
-                    widget::button::standard(t.skip)
+            Phase::Break(_, end) => {
+                let (detail, time) = if now < end {
+                    ((t.rest)(&fmt(since(now, end))), since(now, end))
+                } else {
+                    ((t.late)(&fmt(since(end, now))), Duration::ZERO)
+                };
+                (
+                    t.brk,
+                    time,
+                    detail,
+                    vec![widget::button::suggested(t.skip)
                         .on_press(Message::Stop)
-                        .into(),
-                    widget::button::suggested(t.back)
-                        .on_press(Message::Start)
-                        .into(),
-                ],
-            ),
+                        .into()],
+                )
+            }
         };
         // click a part (h/min/s) to edit it; break countdown isn't editable
-        let editable = !matches!(self.phase, Phase::Break(_));
+        let editable = !matches!(self.phase, Phase::Break(..));
         let mut clock = widget::Row::new().align_y(Alignment::Center);
         for (i, (unit, text)) in parts(time).into_iter().enumerate() {
             if i > 0 {
@@ -467,7 +536,9 @@ impl Applet {
                     .on_submit(|_| Message::EditConfirm)
                     // match title1 (35px / 52px line) so the clock doesn't jump while editing
                     .size(35.)
-                    .line_height(cosmic::iced::widget::text::LineHeight::Absolute(52.0.into()))
+                    .line_height(cosmic::iced::widget::text::LineHeight::Absolute(
+                        52.0.into(),
+                    ))
                     .padding([0, 6])
                     .width(Length::Fixed(56.))
                     .into(),
@@ -520,6 +591,8 @@ mod tests {
     fn language() {
         assert_eq!(pick("pt_BR.UTF-8").focus, "Foco");
         assert_eq!(pick("pt_PT").focus, "Foco");
+        assert_eq!(pick("es_ES.UTF-8").focus, "Concentración");
+        assert_eq!(pick("es_MX").skip, "Terminar el descanso");
         assert_eq!(pick("en_US.UTF-8").focus, "Focus");
         assert_eq!(pick("").focus, "Focus");
     }
@@ -527,10 +600,15 @@ mod tests {
     #[test]
     fn state_roundtrip() {
         let t = UNIX_EPOCH + Duration::from_millis(1_700_000_000_123);
-        for p in [Phase::Focus(t), Phase::Break(t)] {
+        for p in [
+            Phase::Focus(t),
+            Phase::Break(t, t + Duration::from_secs(600)),
+        ] {
             assert_eq!(decode(&encode(p).unwrap()), p);
         }
         assert_eq!(encode(Phase::Idle), None);
+        assert_eq!(decode("break 1700000000123"), Phase::Idle);
+        assert_eq!(decode("focus 1 2"), Phase::Idle);
         assert_eq!(decode("garbage"), Phase::Idle);
         assert_eq!(parse_part(" 25 "), Some(25));
         assert_eq!(parse_part("-5"), None);
@@ -540,5 +618,26 @@ mod tests {
         assert_eq!(set_part(d(330), 60, 25), d(1530));
         assert_eq!(set_part(d(3725), 1, 0), d(3720));
         assert_eq!(set_part(d(3725), 3600, 2), d(7325));
+    }
+
+    #[test]
+    fn break_overrun_is_reported() {
+        let t = UNIX_EPOCH + Duration::from_secs(1_700_000_000);
+        let over = |d: u64| break_clock(t, t + Duration::from_secs(d));
+        assert_eq!(break_clock(t, t - Duration::from_secs(600)), "10:00");
+        assert_eq!(over(1), "+00:01");
+        assert_eq!(over(180), "+03:00");
+        assert_eq!(over(3725), "+1:02:05");
+    }
+
+    #[test]
+    fn break_bell_fires_once() {
+        let dir = std::env::temp_dir().join(format!("flowmodoro-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_var("XDG_RUNTIME_DIR", &dir);
+        assert!(bell("t"));
+        assert!(!bell("t"));
+        assert!(bell("u"));
+        drop(std::fs::remove_dir_all(&dir));
     }
 }

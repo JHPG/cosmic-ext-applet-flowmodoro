@@ -14,9 +14,15 @@ install: build
     install -Dm755 target/release/{{name}} {{bin}}
     sed 's|^Exec=.*|Exec={{bin}}|' data/{{id}}.desktop | install -Dm644 /dev/stdin {{share}}/applications/{{id}}.desktop
     install -Dm644 data/{{id}}-symbolic.svg {{share}}/icons/hicolor/scalable/apps/{{id}}-symbolic.svg
+    install -Dm644 data/{{id}}.png {{share}}/icons/hicolor/256x256/apps/{{id}}.png
+
+# install + restart the panel so the change is actually visible.
+# The panel runs ~/.local/bin, NOT target/: without this the applet keeps the old image.
+reload: install
+    -pkill -x cosmic-panel
 
 uninstall:
-    rm -f {{bin}} {{share}}/applications/{{id}}.desktop {{share}}/icons/hicolor/scalable/apps/{{id}}-symbolic.svg
+    rm -f {{bin}} {{share}}/applications/{{id}}.desktop {{share}}/icons/hicolor/scalable/apps/{{id}}-symbolic.svg {{share}}/icons/hicolor/256x256/apps/{{id}}.png
 
 # regenerate flatpak/cargo-sources.json after changing Cargo.lock
 flatpak-sources:

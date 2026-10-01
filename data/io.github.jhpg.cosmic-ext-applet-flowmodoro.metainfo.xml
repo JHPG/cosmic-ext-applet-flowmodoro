@@ -7,6 +7,7 @@
   <name>Flowmodoro</name>
   <summary>Flowmodoro focus timer for the COSMIC panel</summary>
   <summary xml:lang="pt-BR">Temporizador Flowmodoro para o painel do COSMIC</summary>
+  <summary xml:lang="es">Temporizador Flowmodoro para el panel de COSMIC</summary>
   <developer id="io.github.jhpg">
     <name>Jorge Garcia</name>
   </developer>
@@ -19,23 +20,33 @@
       Um temporizador Flowmodoro: em vez de blocos fixos como no Pomodoro, você foca enquanto
       durar o fluxo e depois faz uma pausa de um quinto do tempo que focou.
     </p>
+    <p xml:lang="es">
+      Un temporizador Flowmodoro: en lugar de bloques fijos como el Pomodoro, te concentras
+      mientras dure el flujo y después descansas una quinta parte del tiempo que te concentraste.
+    </p>
     <ul>
       <li>Panel icon shows the elapsed focus time or the remaining break</li>
       <li xml:lang="pt-BR">O painel mostra o tempo de foco ou o que falta da pausa</li>
+      <li xml:lang="es">El panel muestra el tiempo de concentración o lo que queda de descanso</li>
       <li>Popup with the accrued break and one-click start, rest and reset</li>
       <li xml:lang="pt-BR">Popup com a pausa acumulada e botões para iniciar, descansar e resetar</li>
+      <li xml:lang="es">Popup con el descanso acumulado y botones para empezar, descansar y reiniciar</li>
       <li>Forgot to start the timer? Click the minutes or seconds to correct them</li>
       <li xml:lang="pt-BR">Esqueceu de iniciar? Clique nos minutos ou segundos para corrigir</li>
+      <li xml:lang="es">¿Olvidaste iniciar el temporizador? Haz clic en los minutos o segundos para corregirlos</li>
       <li>Notifications when a break starts and ends</li>
       <li xml:lang="pt-BR">Notificações no início e no fim da pausa</li>
+      <li xml:lang="es">Notificaciones al empezar y al terminar un descanso</li>
       <li>Stays in sync across the panels of all your monitors</li>
       <li xml:lang="pt-BR">Sincronizado entre os painéis de todos os monitores</li>
+      <li xml:lang="es">Se mantiene sincronizado entre los paneles de todos tus monitores</li>
     </ul>
-    <p>Available in English and Brazilian Portuguese.</p>
-    <p xml:lang="pt-BR">Disponível em inglês e português do Brasil.</p>
+    <p>Available in English, Brazilian Portuguese and Spanish.</p>
+    <p xml:lang="pt-BR">Disponível em inglês, português do Brasil e espanhol.</p>
+    <p xml:lang="es">Disponible en inglés, portugués de Brasil y español.</p>
   </description>
   <launchable type="desktop-id">io.github.jhpg.cosmic-ext-applet-flowmodoro.desktop</launchable>
-  <icon type="stock">io.github.jhpg.cosmic-ext-applet-flowmodoro-symbolic</icon>
+  <icon type="stock">io.github.jhpg.cosmic-ext-applet-flowmodoro</icon>
   <url type="homepage">https://github.com/JHPG/cosmic-ext-applet-flowmodoro</url>
   <url type="bugtracker">https://github.com/JHPG/cosmic-ext-applet-flowmodoro/issues</url>
   <url type="vcs-browser">https://github.com/JHPG/cosmic-ext-applet-flowmodoro</url>
@@ -49,16 +60,19 @@
       <image>https://raw.githubusercontent.com/JHPG/cosmic-ext-applet-flowmodoro/main/data/screenshot.png</image>
       <caption>Flowmodoro popup during a focus session</caption>
       <caption xml:lang="pt-BR">Popup do Flowmodoro durante uma sessão de foco</caption>
+      <caption xml:lang="es">Popup de Flowmodoro durante una sesión de concentración</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/JHPG/cosmic-ext-applet-flowmodoro/main/data/screenshot-edit.png</image>
       <caption>Click the minutes or seconds to fix a timer you forgot to start</caption>
       <caption xml:lang="pt-BR">Clique nos minutos ou segundos para corrigir um timer que esqueceu de iniciar</caption>
+      <caption xml:lang="es">Haz clic en los minutos o segundos para corregir un temporizador que olvidaste iniciar</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/JHPG/cosmic-ext-applet-flowmodoro/main/data/screenshot-break.png</image>
       <caption>Break countdown, one fifth of the focus time</caption>
       <caption xml:lang="pt-BR">Contagem da pausa, um quinto do tempo de foco</caption>
+      <caption xml:lang="es">Cuenta atrás del descanso, una quinta parte del tiempo de concentración</caption>
     </screenshot>
   </screenshots>
   <provides>

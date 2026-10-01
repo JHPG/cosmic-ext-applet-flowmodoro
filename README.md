@@ -15,19 +15,23 @@ flow. When you stop, you earn a break of **one fifth** of the time you focused
 |-----------|--------------------------|----------------------------------|
 | Idle      | clock icon               | *Start focus*                    |
 | Focus     | icon + elapsed time      | *Reset*, *Take a break*          |
-| Break     | icon + remaining time    | *Skip break*, *Back to focus*    |
+| Break     | icon + remaining time, `+mm:ss` overrun once it ends | *End break*                      |
 
 - **Click the panel button** to open the popup with the current phase, the clock and the break
   you have accrued so far.
 - **Forgot to start the timer?** Click the minutes or seconds in the popup clock, type the
   correct value and press <kbd>Enter</kbd> or ✔. <kbd>Esc</kbd> cancels. Editing while idle
   starts a focus session with that much time already counted.
-- **Notifications** are sent when a break starts and when it ends.
+- **Still resting?** The break doesn't end by itself. Once it's over the panel counts up (`+mm:ss`)
+  and the popup captions it `Late by: mm:ss`, so you can see how far over you are. The break only
+  ends when you press *End break*.
+- **Notifications** are sent when a break starts, when it ends, and once more if you're still on
+  the break 5 minutes later.
 - **Multiple monitors:** the COSMIC panel runs one applet process per monitor. They share their
   state through a small file in `$XDG_RUNTIME_DIR` (`$XDG_RUNTIME_DIR/app/<id>` under Flatpak),
   so every panel shows the same timer. The timer survives panel restarts and resets on logout.
 
-The interface is in English and Brazilian Portuguese, picked from the system language
+The interface is in English, Brazilian Portuguese and Spanish, picked from the system language
 (`LC_ALL`, `LC_MESSAGES` or `LANG`). To add a language, add a `Tr` table in `src/main.rs` and a
 branch in `pick()`, plus the `[xx]` / `xml:lang` entries in `data/`.
 
@@ -76,6 +80,7 @@ just flatpak
 just test         # unit tests
 just build        # release build
 just validate     # check the AppStream metainfo and desktop entry
+just reload       # install + restart the panel, so the change is actually visible
 ```
 
 All code lives in [`src/main.rs`](src/main.rs). The break ratio is the `BREAK_RATIO` constant.

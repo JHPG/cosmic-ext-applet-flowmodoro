@@ -2,13 +2,15 @@
 Name=Flowmodoro
 Comment=Focus as long as you like, then break for a fifth of that time
 Comment[pt_BR]=Foque o quanto quiser e depois descanse um quinto desse tempo
+Comment[es]=Concéntrate todo el tiempo que quieras y luego descansa una quinta parte de ese tiempo
 Type=Application
 Exec=cosmic-ext-applet-flowmodoro
-Icon=io.github.jhpg.cosmic-ext-applet-flowmodoro-symbolic
+Icon=io.github.jhpg.cosmic-ext-applet-flowmodoro
 Terminal=false
 Categories=Utility;
 Keywords=Flowmodoro;Pomodoro;Timer;Focus;Productivity;
 Keywords[pt_BR]=Flowmodoro;Pomodoro;Temporizador;Foco;Produtividade;
+Keywords[es]=Flowmodoro;Pomodoro;Temporizador;Concentración;Productividad;
 StartupNotify=true
 NoDisplay=true
 X-CosmicApplet=true
