@@ -27,7 +27,8 @@ flow. When you stop, you earn a break of **one fifth** of the time you focused
   you have accrued so far.
 - **Forgot to start the timer?** Click the minutes or seconds in the popup clock, type the
   correct value and press <kbd>Enter</kbd> or ✔. <kbd>Esc</kbd> cancels. Editing while idle
-  starts a focus session with that much time already counted.
+  starts a focus session with that much time already counted. Each part holds only what it
+  can: 00–59 for minutes and seconds, 00–23 for hours, so nothing carries into the next part.
 - **Still resting?** The break doesn't end by itself. Once it's over the panel counts up (`+mm:ss`)
   and the popup captions it `Late by: mm:ss`, so you can see how far over you are. The break only
   ends when you press *End break*.
@@ -89,7 +90,10 @@ just validate     # check the AppStream metainfo and desktop entry
 just reload       # install + restart the panel, so the change is actually visible
 ```
 
-All code lives in [`src/main.rs`](src/main.rs). The break ratio is the `BREAK_RATIO` constant.
+One module per concern under [`src/`](src). [`main.rs`](src/main.rs) is the applet adapter and
+the only file that mentions COSMIC; `phase.rs` is the phase machine, `reading.rs` what a phase
+looks like, `state.rs` the shared state file and its bells, `tr.rs` the strings and `clock.rs`
+the clock arithmetic. The break ratio is the `BREAK_RATIO` constant in `phase.rs`.
 
 ## License
 
