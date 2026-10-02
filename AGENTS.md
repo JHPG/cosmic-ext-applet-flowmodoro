@@ -6,13 +6,14 @@
 - Every module carries its own `#[cfg(test)] mod tests` next to the code it tests.
 - **Never change how the session runs things.** No systemd units, no edits to the COSMIC
   config, no autostart or launcher changes, nothing written outside the applet's own files
-  under `~/.local`. If the panel's respawn looks broken, report it and leave it alone —
-  don't fix it by changing the desktop.
-- **Restarting the panel is allowed** when it's the only way to check a change. `just reload`
-  installs and kills `cosmic-panel`, cycling every applet in the session, so say that before
-  running it. The respawn is unreliable here — it has come back as zero panels, and once as
-  two stacked panels — so afterwards confirm exactly one panel is running and report what
-  you find.
+  under `~/.local`, and don't install packages to make debugging easier. If the panel's
+  respawn looks broken, report it and leave it alone.
+- **Killing, restarting and spawning processes is fine for debugging** — the panel, the
+  applet processes, a throwaway run of the binary. Say when you are cycling the panel, since
+  that restarts every applet in the session.
+- **Never start `cosmic-panel` by hand.** `cosmic-session` starts its own a few minutes after
+  it dies; a hand-started one has no parent session and ends up as a second bar. After
+  `pkill -x cosmic-panel`, wait for the session's panel instead of starting one.
 - The panel runs `~/.local/bin/cosmic-ext-applet-flowmodoro`, not `target/`, so a change is
   invisible until it is installed *and* the panel respawns the applet processes. Killing one
   applet process is not enough — the panel only respawns them at startup.
