@@ -89,6 +89,14 @@
     <keyword>focus</keyword>
   </keywords>
   <releases>
+    <release version="0.2.1" date="2026-10-02">
+      <description>
+        <ul>
+          <li>Clicking a clock part only accepts what that part can hold: 00–59 for minutes and seconds, 00–23 for hours, instead of carrying into the next part</li>
+          <li>The panel and the popup read the same instant, so a break that has just ended no longer flickers between a countdown and an overrun</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-10-01">
       <description>
         <ul>
