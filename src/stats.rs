@@ -9,10 +9,6 @@ use jiff::civil::Date;
 use jiff::tz::TimeZone;
 use jiff::{Timestamp, ToSpan};
 
-// ponytail: fixed 25/50 min spread thresholds, make configurable if they stop fitting
-const SHORT_BELOW: Duration = Duration::from_secs(25 * 60);
-const LONG_FROM: Duration = Duration::from_secs(50 * 60);
-
 #[derive(Debug, Default, Clone, PartialEq)]
 pub(crate) struct Summary {
     pub(crate) today_focus: Duration,
@@ -23,26 +19,14 @@ pub(crate) struct Summary {
     pub(crate) taken: Duration,
     pub(crate) late: u32,
     pub(crate) late_over: Duration,
-    /// oldest first; (day of month, focus total). The last entry is today.
+    /// oldest first; (weekday, Monday = 0 … Sunday = 6, focus total). The last entry is today.
     pub(crate) week: [(u8, Duration); 7],
-    /// (short, medium, long) focus sessions over the same 7 days
-    pub(crate) spread: [u32; 3],
 }
 
 /// The civil day an instant falls on in `tz`; None if the instant can't be
 /// represented.
 fn day_of(t: SystemTime, tz: &TimeZone) -> Option<Date> {
     Some(Timestamp::try_from(t).ok()?.to_zoned(tz.clone()).date())
-}
-
-fn bucket(focus: Duration) -> usize {
-    if focus < SHORT_BELOW {
-        0
-    } else if focus < LONG_FROM {
-        1
-    } else {
-        2
-    }
 }
 
 /// `live` is the start of a focus still running; it counts as a session of its
@@ -73,14 +57,13 @@ pub(crate) fn summarize(
 
     let mut s = Summary::default();
     for (slot, day) in s.week.iter_mut().zip(days.iter()) {
-        slot.0 = day.day() as u8;
+        slot.0 = day.weekday().to_monday_zero_offset() as u8;
     }
     for (day, length) in &focus {
         let Some(k) = days.iter().position(|d| d == day) else {
             continue;
         };
         s.week[k].1 += *length;
-        s.spread[bucket(*length)] += 1;
         if *day == today {
             s.today_focus += *length;
             s.sessions += 1;
@@ -163,26 +146,9 @@ mod tests {
 
         let six_ago = [focus(TODAY0 - 6 * DAY + 3600, min(10))];
         let s = summarize(&six_ago, None, now(), tz);
-        assert_eq!(s.week[0], (9, min(10)), "2024-06-09 is first");
-        assert_eq!(s.week[6].0, 15, "today is last");
+        assert_eq!(s.week[0], (6, min(10)), "2024-06-09, a Sunday, is first");
+        assert_eq!(s.week[6].0, 5, "today, a Saturday, is last");
         assert_eq!(s.week.iter().map(|(_, d)| *d).sum::<Duration>(), min(10));
-    }
-
-    #[test]
-    fn spread_buckets_sessions_at_the_thresholds() {
-        let lengths = [
-            Duration::from_secs(24 * 60 + 59),
-            Duration::from_secs(25 * 60),
-            Duration::from_secs(49 * 60 + 59),
-            Duration::from_secs(50 * 60),
-        ];
-        let entries: Vec<Entry> = lengths
-            .iter()
-            .enumerate()
-            .map(|(i, l)| focus(TODAY0 + 3600 * (i as u64 + 1), *l))
-            .collect();
-        let s = summarize(&entries, None, now(), &TimeZone::UTC);
-        assert_eq!(s.spread, [1, 2, 1]);
     }
 
     #[test]
@@ -206,6 +172,13 @@ mod tests {
         let s = summarize(&entries, None, now(), &TimeZone::UTC);
         assert_eq!(s.today_focus, Duration::ZERO);
         assert_eq!(s.sessions, 0);
-        assert_eq!(s.week[5], (14, min(25)));
+        assert_eq!(s.week[5], (4, min(25)));
+    }
+
+    #[test]
+    fn the_week_is_labelled_by_weekday_with_today_last() {
+        let s = summarize(&[], None, at(1_718_452_800), &TimeZone::UTC);
+        assert_eq!(s.week[6].0, 5, "2024-06-15 is a Saturday");
+        assert_eq!(s.week[5].0, 4, "the day before is a Friday");
     }
 }

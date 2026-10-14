@@ -1,5 +1,4 @@
-//! The Stats tab: the summary of the history file, drawn as text. The numbers
-//! come from `stats.rs`; this module only lays them out.
+//! The Stats tab: a hero card, stat tiles, and bars for the last week's focus.
 
 use std::time::SystemTime;
 
@@ -8,7 +7,7 @@ use crate::history::Entry;
 use crate::phase::Phase;
 use crate::stats::{summarize, Summary};
 use crate::tr::tr;
-use cosmic::iced::Alignment;
+use cosmic::iced::{Alignment, Length};
 use cosmic::widget;
 use cosmic::Element;
 use jiff::tz::TimeZone;
@@ -22,45 +21,133 @@ fn summary(history: &[Entry], phase: Phase, now: SystemTime, tz: &TimeZone) -> S
     summarize(history, live, now, tz)
 }
 
-pub(crate) fn view<'a, M: 'a>(history: &[Entry], phase: Phase, now: SystemTime) -> Element<'a, M> {
+pub(crate) fn view<'a, M: Clone + 'a>(
+    history: &[Entry],
+    phase: Phase,
+    now: SystemTime,
+) -> Element<'a, M> {
     let s = summary(history, phase, now, &TimeZone::system());
     let t = tr();
-    let caption = if s.sessions == 0 {
-        t.no_focus.to_owned()
-    } else {
-        (t.sessions)(s.sessions, &fmt(s.avg), &fmt(s.longest))
-    };
-    let mut week = widget::Row::new().spacing(8).align_y(Alignment::End);
-    for (day, focus) in s.week {
-        week = week.push(
-            widget::Column::new()
-                .push(widget::text::caption(day.to_string()))
-                .push(widget::text::body(fmt(focus)))
-                .align_x(Alignment::Center),
-        );
-    }
-    widget::Column::new()
+
+    let mut hero = widget::Column::new()
         .push(widget::text::caption(t.focus_today))
         .push(widget::text::title1(fmt(s.today_focus)))
-        .push(widget::text::caption(caption))
-        .push(widget::text::caption((t.breaks_today)(
-            &fmt(s.earned),
-            &fmt(s.taken),
-        )))
-        .push(widget::text::caption((t.late_today)(
-            s.late,
-            &fmt(s.late_over),
-        )))
-        .push(widget::text::caption((t.spread)(
-            s.spread[0],
-            s.spread[1],
-            s.spread[2],
-        )))
-        .push(widget::text::caption(t.last_7))
-        .push(week)
+        .spacing(4)
+        .width(Length::Fill)
+        .align_x(Alignment::Center);
+    if s.sessions == 0 {
+        hero = hero.push(widget::text::caption(t.no_focus));
+    }
+    let hero = widget::container(hero)
+        .class(cosmic::theme::Container::Card)
+        .padding(16)
+        .width(Length::Fill);
+
+    let mut breaks_extra = vec![(t.earned)(&fmt(s.earned))];
+    if s.late > 0 {
+        breaks_extra.push((t.late_today)(s.late, &fmt(s.late_over)));
+    }
+    let grid = widget::Column::new()
         .spacing(8)
-        .align_x(Alignment::Center)
+        .width(Length::Fill)
+        .push(widget::text::caption(t.today))
+        .push(
+            widget::Row::new()
+                .spacing(8)
+                .width(Length::Fill)
+                .push(tile(t.sessions_label, s.sessions.to_string(), vec![]))
+                .push(tile(t.average_label, fmt(s.avg), vec![])),
+        )
+        .push(
+            widget::Row::new()
+                .spacing(8)
+                .width(Length::Fill)
+                .push(tile(t.longest_label, fmt(s.longest), vec![]))
+                .push(tile(t.breaks_label, fmt(s.taken), breaks_extra)),
+        );
+
+    let max = s
+        .week
+        .iter()
+        .map(|(_, focus)| *focus)
+        .max()
+        .unwrap_or_default();
+    let last = s.week.len() - 1;
+    let mut week = widget::Column::new()
+        .spacing(6)
+        .width(Length::Fill)
+        .push(widget::text::caption(t.last_7));
+    let has_focus = s.week.iter().any(|(_, focus)| !focus.is_zero());
+    for (i, (weekday, focus)) in s.week.iter().enumerate() {
+        // hide empty days; with no focus all week, keep today's row
+        if focus.is_zero() && (has_focus || i != last) {
+            continue;
+        }
+        week = week.push(bar(
+            t.weekdays[usize::from(*weekday)],
+            40.0,
+            i == last,
+            share(focus.as_secs_f32(), max.as_secs_f32()),
+            fmt(*focus),
+            56.0,
+        ));
+    }
+
+    widget::Column::new()
+        .spacing(12)
+        .width(Length::Fill)
+        .push(hero)
+        .push(grid)
+        .push(week)
         .into()
+}
+
+/// One stat card: its label above a large value, then any notes.
+fn tile<'a, M: 'a>(label: &'static str, value: String, extras: Vec<String>) -> Element<'a, M> {
+    let mut body = widget::Column::new()
+        .push(widget::text::caption(label))
+        .push(widget::text::title3(value));
+    for extra in extras {
+        body = body.push(widget::text::caption(extra));
+    }
+    widget::container(body)
+        .class(cosmic::theme::Container::Card)
+        .padding(12)
+        .width(Length::Fill)
+        .into()
+}
+
+/// One bar row: a label, a bar filled to `ratio`, and the value at the end.
+fn bar<'a, M: Clone + 'a>(
+    label: &'static str,
+    label_width: f32,
+    emphasis: bool,
+    ratio: f32,
+    value: String,
+    value_width: f32,
+) -> Element<'a, M> {
+    let label = if emphasis {
+        widget::text::body(label)
+    } else {
+        widget::text::caption(label)
+    };
+    widget::Row::new()
+        .spacing(8)
+        .align_y(Alignment::Center)
+        .width(Length::Fill)
+        .push(label.width(Length::Fixed(label_width)))
+        .push(widget::progress_bar::determinate_linear(ratio).width(Length::Fill))
+        .push(widget::text::caption(value).width(Length::Fixed(value_width)))
+        .into()
+}
+
+/// `part` as a share of `whole`; 0 when there is nothing to share.
+fn share(part: f32, whole: f32) -> f32 {
+    if whole > 0.0 {
+        part / whole
+    } else {
+        0.0
+    }
 }
 
 #[cfg(test)]

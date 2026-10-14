@@ -37,10 +37,10 @@ flow. When you stop, you earn a break of **one fifth** of the time you focused
 - **Multiple monitors:** the COSMIC panel runs one applet process per monitor. They share their
   state through a small file in `$XDG_RUNTIME_DIR` (`$XDG_RUNTIME_DIR/app/<id>` under Flatpak),
   so every panel shows the same timer. The timer survives panel restarts and resets on logout.
-- **Timer and Stats tabs:** the popup has a *Timer* tab (above) and a *Stats* tab: today's focus,
-  sessions with their average and longest, breaks earned and taken, late breaks, the last seven
-  days of focus, and how the sessions split into short (under 25 min), medium and long (50 min or
-  more). Every finished focus and break is appended to `$XDG_DATA_HOME/flowmodoro/history`
+- **Timer and Stats tabs:** the popup has a *Timer* tab (above) and a *Stats* tab: today's focus
+  in a hero card, a grid of tiles for sessions, average, longest, and breaks earned and taken
+  (with late breaks), bars for the last seven days of focus, and bars for how the sessions split
+  into short (under 25 min), medium and long (50 min or more). Every finished focus and break is appended to `$XDG_DATA_HOME/flowmodoro/history`
   (`~/.local/share` by default), so the stats survive logout. The Stats tab reads the file each
   time the popup opens. A focus ended with *Reset* isn't kept.
 

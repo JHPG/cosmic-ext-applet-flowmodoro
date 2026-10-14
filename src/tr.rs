@@ -28,10 +28,13 @@ pub(crate) struct Tr {
     pub(crate) focus_today: &'static str,
     pub(crate) last_7: &'static str,
     pub(crate) no_focus: &'static str,
-    pub(crate) sessions: fn(u32, &str, &str) -> String,
-    pub(crate) breaks_today: fn(&str, &str) -> String,
+    pub(crate) today: &'static str,
+    pub(crate) sessions_label: &'static str,
+    pub(crate) average_label: &'static str,
+    pub(crate) longest_label: &'static str,
+    pub(crate) breaks_label: &'static str,
+    pub(crate) weekdays: [&'static str; 7],
     pub(crate) late_today: fn(u32, &str) -> String,
-    pub(crate) spread: fn(u32, u32, u32) -> String,
 }
 
 const EN: Tr = Tr {
@@ -57,10 +60,13 @@ const EN: Tr = Tr {
     focus_today: "Focus today",
     last_7: "Last 7 days",
     no_focus: "No focus yet",
-    sessions: |n, a, l| format!("Sessions: {n} · avg {a} · longest {l}"),
-    breaks_today: |e, t| format!("Breaks: {e} earned · {t} taken"),
-    late_today: |n, o| format!("Late breaks: {n} · +{o} over"),
-    spread: |s, m, l| format!("Short {s} · Medium {m} · Long {l}"),
+    today: "Today",
+    sessions_label: "Sessions",
+    average_label: "Average",
+    longest_label: "Longest",
+    breaks_label: "Breaks taken",
+    weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    late_today: |n, o| format!("{n} late · +{o}"),
 };
 
 const PT: Tr = Tr {
@@ -85,10 +91,13 @@ const PT: Tr = Tr {
     focus_today: "Foco hoje",
     last_7: "Últimos 7 dias",
     no_focus: "Nenhum foco ainda",
-    sessions: |n, a, l| format!("Sessões: {n} · média {a} · maior {l}"),
-    breaks_today: |e, t| format!("Pausas: {e} ganhas · {t} feitas"),
-    late_today: |n, o| format!("Pausas atrasadas: {n} · +{o} de atraso"),
-    spread: |s, m, l| format!("Curtas {s} · Médias {m} · Longas {l}"),
+    today: "Hoje",
+    sessions_label: "Sessões",
+    average_label: "Média",
+    longest_label: "Maior",
+    breaks_label: "Pausas feitas",
+    weekdays: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+    late_today: |n, o| format!("{n} atrasadas · +{o}"),
 };
 
 const ES: Tr = Tr {
@@ -115,10 +124,13 @@ const ES: Tr = Tr {
     focus_today: "Enfoque hoy",
     last_7: "Últimos 7 días",
     no_focus: "Sin enfoque todavía",
-    sessions: |n, a, l| format!("Sesiones: {n} · media {a} · más larga {l}"),
-    breaks_today: |e, t| format!("Descansos: {e} ganados · {t} tomados"),
-    late_today: |n, o| format!("Descansos tarde: {n} · +{o} de retraso"),
-    spread: |s, m, l| format!("Cortas {s} · Medias {m} · Largas {l}"),
+    today: "Hoy",
+    sessions_label: "Sesiones",
+    average_label: "Media",
+    longest_label: "Más larga",
+    breaks_label: "Descansos tomados",
+    weekdays: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+    late_today: |n, o| format!("{n} tarde · +{o}"),
 };
 
 /// Language from a POSIX locale ("pt_BR.UTF-8", "es_ES.UTF-8"); English otherwise.
