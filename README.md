@@ -37,9 +37,15 @@ flow. When you stop, you earn a break of **one fifth** of the time you focused
 - **Multiple monitors:** the COSMIC panel runs one applet process per monitor. They share their
   state through a small file in `$XDG_RUNTIME_DIR` (`$XDG_RUNTIME_DIR/app/<id>` under Flatpak),
   so every panel shows the same timer. The timer survives panel restarts and resets on logout.
+- **Timer and Stats tabs:** the popup has a *Timer* tab (above) and a *Stats* tab: today's focus,
+  sessions with their average and longest, breaks earned and taken, late breaks, the last seven
+  days of focus, and how the sessions split into short (under 25 min), medium and long (50 min or
+  more). Every finished focus and break is appended to `$XDG_DATA_HOME/flowmodoro/history`
+  (`~/.local/share` by default), so the stats survive logout. The Stats tab reads the file each
+  time the popup opens. A focus ended with *Reset* isn't kept.
 
 The interface is in English, Brazilian Portuguese and Spanish, picked from the system language
-(`LC_ALL`, `LC_MESSAGES` or `LANG`). To add a language, add a `Tr` table in `src/main.rs` and a
+(`LC_ALL`, `LC_MESSAGES` or `LANG`). To add a language, add a `Tr` table in `src/tr.rs` and a
 branch in `pick()`, plus the `[xx]` / `xml:lang` entries in `data/`.
 
 ## Install
@@ -92,8 +98,9 @@ just reload       # install + restart the panel, so the change is actually visib
 
 One module per concern under [`src/`](src). [`main.rs`](src/main.rs) is the applet adapter and
 the only file that mentions COSMIC; `phase.rs` is the phase machine, `reading.rs` what a phase
-looks like, `state.rs` the shared state file and its bells, `tr.rs` the strings and `clock.rs`
-the clock arithmetic. The break ratio is the `BREAK_RATIO` constant in `phase.rs`.
+looks like, `state.rs` the shared state file and its bells, `history.rs` the history file,
+`stats.rs` its numbers and `stats_view.rs` the Stats tab, `tab.rs` the tab bar, `tr.rs` the strings
+and `clock.rs` the clock arithmetic. The break ratio is the `BREAK_RATIO` constant in `phase.rs`.
 
 ## License
 

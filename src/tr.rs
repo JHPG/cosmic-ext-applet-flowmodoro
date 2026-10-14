@@ -23,6 +23,15 @@ pub(crate) struct Tr {
     pub(crate) break_over_body: &'static str,
     pub(crate) still_away: &'static str,
     pub(crate) still_away_body: fn(u64) -> String,
+    pub(crate) tab_timer: &'static str,
+    pub(crate) tab_stats: &'static str,
+    pub(crate) focus_today: &'static str,
+    pub(crate) last_7: &'static str,
+    pub(crate) no_focus: &'static str,
+    pub(crate) sessions: fn(u32, &str, &str) -> String,
+    pub(crate) breaks_today: fn(&str, &str) -> String,
+    pub(crate) late_today: fn(u32, &str) -> String,
+    pub(crate) spread: fn(u32, u32, u32) -> String,
 }
 
 const EN: Tr = Tr {
@@ -43,6 +52,15 @@ const EN: Tr = Tr {
     still_away: "Still on break",
     // ponytail: no plural rule; wrong for a 1-minute nudge, add one if it gets that small
     still_away_body: |m| format!("The break ended {m} minutes ago"),
+    tab_timer: "Timer",
+    tab_stats: "Stats",
+    focus_today: "Focus today",
+    last_7: "Last 7 days",
+    no_focus: "No focus yet",
+    sessions: |n, a, l| format!("Sessions: {n} · avg {a} · longest {l}"),
+    breaks_today: |e, t| format!("Breaks: {e} earned · {t} taken"),
+    late_today: |n, o| format!("Late breaks: {n} · +{o} over"),
+    spread: |s, m, l| format!("Short {s} · Medium {m} · Long {l}"),
 };
 
 const PT: Tr = Tr {
@@ -62,6 +80,15 @@ const PT: Tr = Tr {
     break_over_body: "Hora de voltar ao foco",
     still_away: "Ainda na pausa",
     still_away_body: |m| format!("A pausa acabou há {m} minutos"),
+    tab_timer: "Timer",
+    tab_stats: "Estatísticas",
+    focus_today: "Foco hoje",
+    last_7: "Últimos 7 dias",
+    no_focus: "Nenhum foco ainda",
+    sessions: |n, a, l| format!("Sessões: {n} · média {a} · maior {l}"),
+    breaks_today: |e, t| format!("Pausas: {e} ganhas · {t} feitas"),
+    late_today: |n, o| format!("Pausas atrasadas: {n} · +{o} de atraso"),
+    spread: |s, m, l| format!("Curtas {s} · Médias {m} · Longas {l}"),
 };
 
 const ES: Tr = Tr {
@@ -83,6 +110,15 @@ const ES: Tr = Tr {
     break_over_body: "Es hora de volver a concentrarse",
     still_away: "Todavía en descanso",
     still_away_body: |m| format!("El descanso terminó hace {m} minutos"),
+    tab_timer: "Temporizador",
+    tab_stats: "Estadísticas",
+    focus_today: "Enfoque hoy",
+    last_7: "Últimos 7 días",
+    no_focus: "Sin enfoque todavía",
+    sessions: |n, a, l| format!("Sesiones: {n} · media {a} · más larga {l}"),
+    breaks_today: |e, t| format!("Descansos: {e} ganados · {t} tomados"),
+    late_today: |n, o| format!("Descansos tarde: {n} · +{o} de retraso"),
+    spread: |s, m, l| format!("Cortas {s} · Medias {m} · Largas {l}"),
 };
 
 /// Language from a POSIX locale ("pt_BR.UTF-8", "es_ES.UTF-8"); English otherwise.

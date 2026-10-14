@@ -932,6 +932,7 @@ dependencies = [
 name = "cosmic-ext-applet-flowmodoro"
 version = "0.2.1"
 dependencies = [
+ "jiff",
  "libcosmic",
  "notify-rust",
 ]

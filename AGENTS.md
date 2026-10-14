@@ -17,8 +17,10 @@
 - The panel runs `~/.local/bin/cosmic-ext-applet-flowmodoro`, not `target/`, so a change is
   invisible until it is installed *and* the panel respawns the applet processes. Killing one
   applet process is not enough — the panel only respawns them at startup.
-- `just install` alone updates the binary without touching the session; pair it with
-  `cargo test` and a look at the state file when a reload isn't needed.
+- **After implementing a change, run `just reload`** (install + `pkill -x cosmic-panel`) so the
+  change is live. This is allowed without asking; say when you do it, since it restarts every
+  applet in the session. Use `just install` alone only when a reload isn't needed; pair either
+  with `cargo test` and a look at the state file.
 - Strings: the `Tr` table in `src/tr.rs` plus a `pick()` branch; keep `data/*.desktop` and
   `data/*.metainfo.xml` translations in sync when adding a language.
 - Keep `README.md` in sync: when a feature or substantial change lands, update the README in

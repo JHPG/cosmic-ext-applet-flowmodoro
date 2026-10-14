@@ -2,6 +2,7 @@
 //! for. Knows nothing about COSMIC, so `just test` drives it directly.
 
 use crate::clock::{fmt, set_part, since};
+use crate::history::Entry;
 use crate::state::Bell;
 use crate::tr::tr;
 use std::time::{Duration, SystemTime};
@@ -63,6 +64,8 @@ pub(crate) enum Effect {
         summary: &'static str,
         body: String,
     },
+    /// a finished focus or break, appended to the history file
+    Record(Entry),
 }
 
 /// The break a focus earns.
@@ -96,10 +99,25 @@ pub(crate) fn step(
             now - set_part(phase.elapsed(now), unit, value),
         )),
         Msg::Act(Action::Start) => Some(Phase::Focus(now)),
-        Msg::Act(Action::Stop) => Some(Phase::Idle),
+        Msg::Act(Action::Stop) => match phase {
+            // a break that ends is recorded; a focus stopped with Reset is discarded
+            Phase::Break(start, end) => {
+                fx(Effect::Record(Entry::Break {
+                    start,
+                    earned: since(start, end),
+                    taken: since(start, now),
+                }));
+                Some(Phase::Idle)
+            }
+            Phase::Idle | Phase::Focus(_) => Some(Phase::Idle),
+        },
         Msg::Act(Action::TakeBreak) => match phase {
             Phase::Focus(start) => {
                 let focus = since(start, now);
+                // a zero-length focus would drag the averages down, so it isn't kept
+                if !focus.is_zero() {
+                    fx(Effect::Record(Entry::Focus { start, focus }));
+                }
                 let brk = break_for(focus);
                 fx(Effect::ResetBells);
                 fx(Effect::Notify {
@@ -167,11 +185,18 @@ mod tests {
         assert_eq!(next, Some(Phase::Break(at(1000), at(1000 + brk.as_secs()))));
         assert_eq!(
             fx.len(),
-            2,
-            "the bells are cleared and the break is announced"
+            3,
+            "the focus is recorded, the bells are cleared and the break is announced"
         );
-        assert_eq!(fx[0], Effect::ResetBells);
-        let Effect::Notify { summary, body } = &fx[1] else {
+        assert_eq!(
+            fx[0],
+            Effect::Record(Entry::Focus {
+                start: at(0),
+                focus: d(1000)
+            })
+        );
+        assert_eq!(fx[1], Effect::ResetBells);
+        let Effect::Notify { summary, body } = &fx[2] else {
             panic!("the break is announced, not silent")
         };
         assert_eq!(*summary, tr().brk);
@@ -241,6 +266,42 @@ mod tests {
                 at(20000)
             ),
             (None, vec![])
+        );
+    }
+
+    #[test]
+    fn a_finished_focus_and_break_are_recorded_but_a_reset_is_not() {
+        // taking a break keeps the focus that earned it
+        let (_, fx) = run(Msg::Act(Action::TakeBreak), Phase::Focus(at(0)), at(1000));
+        assert_eq!(
+            fx[0],
+            Effect::Record(Entry::Focus {
+                start: at(0),
+                focus: d(1000)
+            })
+        );
+        // zero time on the focus: nothing kept, so averages aren't skewed
+        let (_, fx) = run(
+            Msg::Act(Action::TakeBreak),
+            Phase::Focus(at(1000)),
+            at(1000),
+        );
+        assert!(!fx.iter().any(|e| matches!(e, Effect::Record(_))));
+        // ending a break keeps what was earned and what was taken
+        assert_eq!(
+            run(
+                Msg::Act(Action::Stop),
+                Phase::Break(at(500), at(1000)),
+                at(1300)
+            ),
+            (
+                Some(Phase::Idle),
+                vec![Effect::Record(Entry::Break {
+                    start: at(500),
+                    earned: d(500),
+                    taken: d(800)
+                })]
+            )
         );
     }
 }

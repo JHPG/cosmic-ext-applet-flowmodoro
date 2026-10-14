@@ -3,9 +3,13 @@
 //! their own module; see `docs/adr/0001` for why the instances share a file.
 
 mod clock;
+mod history;
 mod phase;
 mod reading;
 mod state;
+mod stats;
+mod stats_view;
+mod tab;
 mod tr;
 
 use cosmic::iced::{time, window::Id, Alignment, Length, Rectangle, Subscription, Vector};
@@ -16,8 +20,11 @@ use std::sync::LazyLock;
 use std::time::{Duration, SystemTime};
 
 use clock::{parse_part, parts};
+use cosmic::widget::segmented_button::{Entity, SingleSelectModel};
+use history::Entry;
 use phase::{step, Action, Effect, Msg, Phase};
 use state::{load, save, Bell};
+use tab::Tab;
 
 const ICON: &str = "io.github.jhpg.cosmic-ext-applet-flowmodoro-symbolic";
 static EDIT_ID: LazyLock<cosmic::iced::core::widget::Id> =
@@ -29,11 +36,14 @@ struct Applet {
     popup: Option<Id>,
     // part being edited in the popup: (unit in seconds, typed text)
     editing: Option<(u64, String)>,
+    tabs: SingleSelectModel,
+    history: Vec<Entry>,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
     Do(Action),
+    Tab(Entity),
     Tick,
     EditPart(u64),
     EditInput(String),
@@ -55,6 +65,7 @@ fn fire(e: Effect) {
                 notify(summary, &body);
             }
         }
+        Effect::Record(e) => history::append(&e),
     }
 }
 
@@ -91,6 +102,8 @@ impl cosmic::Application for Applet {
             phase: load(),
             popup: None,
             editing: None,
+            tabs: tab::model(),
+            history: Vec::new(),
         };
         (app, Task::none())
     }
@@ -103,6 +116,10 @@ impl cosmic::Application for Applet {
         // Surface and edit messages never move the phase, so they never touch
         // the shared state file either.
         let msg = match message {
+            Message::Tab(e) => {
+                self.tabs.activate(e);
+                return Task::none();
+            }
             Message::Surface(a) => return Task::done(cosmic::Action::Surface(a)),
             Message::PopupClosed(id) => {
                 self.editing = None;
@@ -125,7 +142,13 @@ impl cosmic::Application for Applet {
                 self.editing = None;
                 return Task::none();
             }
-            Message::Tick => Msg::Tick,
+            Message::Tick => {
+                // the Stats tab shows live numbers, so re-read the history each tick
+                if self.popup.is_some() && tab::active(&self.tabs) == Tab::Stats {
+                    self.history = history::load();
+                }
+                Msg::Tick
+            }
             Message::Do(action) => Msg::Act(action),
             // a value the clock can't hold keeps the editor open to be fixed
             Message::EditConfirm => {
@@ -161,6 +184,8 @@ impl cosmic::Application for Applet {
                 move |state: &mut Applet| {
                     let id = Id::unique();
                     state.popup = Some(id);
+                    state.history = history::load();
+                    state.tabs.activate_position(0);
                     let mut s = state.core.applet.get_popup_settings(
                         state.core.main_window_id().unwrap(),
                         id,
@@ -288,11 +313,21 @@ impl Applet {
                 }
             })
             .collect::<Vec<Element<'_, Message>>>();
-        let content = widget::Column::new()
+        let timer = widget::Column::new()
             .push(widget::text::heading(read.title))
             .push(clock)
             .push(widget::text::caption(read.detail))
             .push(widget::row::with_children(buttons).spacing(8))
+            .spacing(8)
+            .width(Length::Fill)
+            .align_x(Alignment::Center);
+        let body: Element<'_, Message> = match tab::active(&self.tabs) {
+            Tab::Timer => timer.into(),
+            Tab::Stats => stats_view::view(&self.history, self.phase, SystemTime::now()),
+        };
+        let content = widget::Column::new()
+            .push(tab::bar(&self.tabs, Message::Tab))
+            .push(body)
             .spacing(8)
             .padding(16)
             .width(Length::Fill)
