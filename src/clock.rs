@@ -1,25 +1,37 @@
 //! Clock parts: the arithmetic and the text behind `[h:]mm:ss`.
 
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// How long has passed since `t`; zero if `t` lies in the future.
 pub(crate) fn since(t: SystemTime, now: SystemTime) -> Duration {
     now.duration_since(t).unwrap_or_default()
 }
 
+/// Milliseconds since the Unix epoch: the unit the state and history files store.
+pub(crate) fn millis(t: SystemTime) -> u128 {
+    t.duration_since(UNIX_EPOCH).unwrap_or_default().as_millis()
+}
+
+/// Reads a millisecond count written by `millis` back into an instant.
+pub(crate) fn at_millis(s: &str) -> Option<SystemTime> {
+    Some(UNIX_EPOCH + Duration::from_millis(s.parse().ok()?))
+}
+
 /// Time split as (unit in seconds, text): [h,] mm, ss
 pub(crate) fn parts(d: Duration) -> Vec<(u64, String)> {
     let s = d.as_secs();
-    let mut v = vec![
-        (60, format!("{:02}", s / 60 % 60)),
-        (1, format!("{:02}", s % 60)),
-    ];
     if s >= 3600 {
-        v.insert(0, (3600, (s / 3600).to_string()));
+        vec![
+            (3600, (s / 3600).to_string()),
+            (60, format!("{:02}", s / 60 % 60)),
+            (1, format!("{:02}", s % 60)),
+        ]
     } else {
-        v[0].1 = format!("{:02}", s / 60);
+        vec![
+            (60, format!("{:02}", s / 60)),
+            (1, format!("{:02}", s % 60)),
+        ]
     }
-    v
 }
 
 pub(crate) fn fmt(d: Duration) -> String {

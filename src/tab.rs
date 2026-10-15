@@ -2,9 +2,7 @@
 //! tab is selected and `active` reads it back.
 
 use crate::tr::tr;
-use cosmic::widget::segmented_button::{Entity, SingleSelectModel};
-use cosmic::widget::tab_bar;
-use cosmic::Element;
+use cosmic::widget::segmented_button::SingleSelectModel;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Tab {
@@ -26,13 +24,6 @@ pub(crate) fn active(model: &SingleSelectModel) -> Tab {
         .find(|&e| model.is_active(e))
         .and_then(|e| model.data::<Tab>(e).copied())
         .unwrap_or(Tab::Timer)
-}
-
-pub(crate) fn bar<'a, M: Clone + 'static>(
-    model: &'a SingleSelectModel,
-    on_activate: impl Fn(Entity) -> M + 'static,
-) -> Element<'a, M> {
-    tab_bar::horizontal(model).on_activate(on_activate).into()
 }
 
 #[cfg(test)]

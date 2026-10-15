@@ -2,9 +2,9 @@
 //! bells beside it. The mechanism is settled in `docs/adr/0001`; read it before
 //! proposing to change how the instances find each other.
 
+use crate::clock::{at_millis, millis};
 use std::fs;
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::phase::{Phase, LATE_NUDGE};
 use crate::tr::tr;
@@ -86,25 +86,19 @@ impl Bell {
 }
 
 fn encode(p: Phase) -> Option<String> {
-    let ms = |t: SystemTime| t.duration_since(UNIX_EPOCH).unwrap_or_default().as_millis();
     match p {
         Phase::Idle => None,
-        Phase::Focus(t) => Some(format!("focus {}", ms(t))),
-        Phase::Break(s, e) => Some(format!("break {} {}", ms(s), ms(e))),
+        Phase::Focus(t) => Some(format!("focus {}", millis(t))),
+        Phase::Break(s, e) => Some(format!("break {} {}", millis(s), millis(e))),
     }
 }
 
 fn decode(s: &str) -> Phase {
-    let at = |v: &str| {
-        v.parse()
-            .ok()
-            .map(|ms: u64| UNIX_EPOCH + Duration::from_millis(ms))
-    };
     let mut w = s.trim().split(' ');
     match (
         w.next().unwrap_or_default(),
-        w.next().and_then(at),
-        w.next().and_then(at),
+        w.next().and_then(at_millis),
+        w.next().and_then(at_millis),
     ) {
         ("focus", Some(t), None) => Phase::Focus(t),
         ("break", Some(s), Some(e)) => Phase::Break(s, e),
@@ -134,6 +128,7 @@ pub(crate) fn save(p: Phase) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{Duration, UNIX_EPOCH};
 
     #[test]
     fn the_phase_survives_the_round_trip() {

@@ -42,32 +42,27 @@ pub(crate) fn summarize(
     };
     let days: [Date; 7] = std::array::from_fn(|i| today.saturating_sub((6 - i as i64).days()));
 
-    let mut focus: Vec<(Date, Duration)> = entries
+    let focus = entries
         .iter()
         .filter_map(|e| match e {
             Entry::Focus { start, focus } => Some((day_of(*start, tz)?, *focus)),
             Entry::Break { .. } => None,
         })
-        .collect();
-    if let Some(start) = live {
-        if let Some(day) = day_of(start, tz) {
-            focus.push((day, since(start, now)));
-        }
-    }
+        .chain(live.and_then(|start| day_of(start, tz).map(|day| (day, since(start, now)))));
 
     let mut s = Summary::default();
     for (slot, day) in s.week.iter_mut().zip(days.iter()) {
         slot.0 = day.weekday().to_monday_zero_offset() as u8;
     }
-    for (day, length) in &focus {
-        let Some(k) = days.iter().position(|d| d == day) else {
+    for (day, length) in focus {
+        let Some(k) = days.iter().position(|d| *d == day) else {
             continue;
         };
-        s.week[k].1 += *length;
-        if *day == today {
-            s.today_focus += *length;
+        s.week[k].1 += length;
+        if day == today {
+            s.today_focus += length;
             s.sessions += 1;
-            s.longest = s.longest.max(*length);
+            s.longest = s.longest.max(length);
         }
     }
     if s.sessions > 0 {

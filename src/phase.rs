@@ -80,6 +80,15 @@ pub(crate) fn break_for(focus: Duration) -> Duration {
     focus / BREAK_RATIO
 }
 
+/// Starts a break: the last break's bells are cleared and the start is announced.
+fn start_break(fx: &mut dyn FnMut(Effect), focus: Duration, brk: Duration) {
+    fx(Effect::ResetBells);
+    fx(Effect::Notify {
+        summary: tr().brk,
+        body: (tr().break_started)(&fmt(focus), &fmt(brk)),
+    });
+}
+
 /// What a message does to a phase, and the effects it wants fired. `None` means
 /// the phase doesn't move, so nothing is written.
 pub(crate) fn step(
@@ -120,11 +129,7 @@ pub(crate) fn step(
                     }));
                     return Some(Phase::Idle);
                 }
-                fx(Effect::ResetBells);
-                fx(Effect::Notify {
-                    summary: tr().brk,
-                    body: (tr().break_started)(&fmt(focus), &fmt(brk)),
-                });
+                start_break(fx, focus, brk);
                 Some(Phase::Break(last_seen, last_seen + brk))
             }
             _ => None,
@@ -155,11 +160,7 @@ pub(crate) fn step(
                     fx(Effect::Record(Entry::Focus { start, focus }));
                 }
                 let brk = break_for(focus);
-                fx(Effect::ResetBells);
-                fx(Effect::Notify {
-                    summary: tr().brk,
-                    body: (tr().break_started)(&fmt(focus), &fmt(brk)),
-                });
+                start_break(fx, focus, brk);
                 Some(Phase::Break(now, now + brk))
             }
             // nothing to earn a break from outside a focus session

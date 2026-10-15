@@ -19,7 +19,7 @@ use cosmic::widget;
 use std::sync::LazyLock;
 use std::time::{Duration, SystemTime};
 
-use clock::{parse_part, parts};
+use clock::{parse_part, parts, since};
 use cosmic::widget::segmented_button::{Entity, SingleSelectModel};
 use history::Entry;
 use phase::{step, Action, Effect, Msg, Phase, AWAY_GAP};
@@ -158,7 +158,7 @@ impl cosmic::Application for Applet {
                 // a long gap between ticks means the machine slept; the phase machine ends the focus there
                 let now = SystemTime::now();
                 let last = std::mem::replace(&mut self.last_tick, now);
-                if now.duration_since(last).unwrap_or_default() > AWAY_GAP {
+                if since(last, now) > AWAY_GAP {
                     Msg::Away { last_seen: last }
                 } else {
                     Msg::Tick
@@ -352,7 +352,7 @@ impl Applet {
             Tab::Stats => stats_view::view(&self.history, self.phase, SystemTime::now()),
         };
         let content = widget::Column::new()
-            .push(tab::bar(&self.tabs, Message::Tab))
+            .push(widget::tab_bar::horizontal(&self.tabs).on_activate(Message::Tab))
             .push(body)
             .spacing(8)
             .padding(16)

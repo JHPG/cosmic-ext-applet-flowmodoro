@@ -4,7 +4,9 @@
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
+
+use crate::clock::{at_millis, millis};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Entry {
@@ -17,10 +19,6 @@ pub(crate) enum Entry {
         earned: Duration,
         taken: Duration,
     },
-}
-
-fn millis(t: SystemTime) -> u128 {
-    t.duration_since(UNIX_EPOCH).unwrap_or_default().as_millis()
 }
 
 pub(crate) fn encode(e: &Entry) -> String {
@@ -41,10 +39,6 @@ pub(crate) fn encode(e: &Entry) -> String {
     }
 }
 
-fn at(s: &str) -> Option<SystemTime> {
-    Some(UNIX_EPOCH + Duration::from_millis(s.parse().ok()?))
-}
-
 fn dur(s: &str) -> Option<Duration> {
     Some(Duration::from_millis(s.parse().ok()?))
 }
@@ -54,11 +48,11 @@ pub(crate) fn decode(line: &str) -> Option<Entry> {
     let fields: Vec<&str> = line.split_whitespace().collect();
     match fields.as_slice() {
         ["focus", start, focus] => Some(Entry::Focus {
-            start: at(start)?,
+            start: at_millis(start)?,
             focus: dur(focus)?,
         }),
         ["break", start, earned, taken] => Some(Entry::Break {
-            start: at(start)?,
+            start: at_millis(start)?,
             earned: dur(earned)?,
             taken: dur(taken)?,
         }),
@@ -110,6 +104,7 @@ pub(crate) fn modified() -> Option<SystemTime> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::UNIX_EPOCH;
 
     fn at(s: u64) -> SystemTime {
         UNIX_EPOCH + Duration::from_secs(s)
