@@ -102,6 +102,11 @@ pub(crate) fn load() -> Vec<Entry> {
         .unwrap_or_default()
 }
 
+/// Modification time of the history file: lets the Stats tab skip re-reading it.
+pub(crate) fn modified() -> Option<SystemTime> {
+    fs::metadata(path()?).ok()?.modified().ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

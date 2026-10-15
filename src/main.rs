@@ -22,7 +22,7 @@ use std::time::{Duration, SystemTime};
 use clock::{parse_part, parts};
 use cosmic::widget::segmented_button::{Entity, SingleSelectModel};
 use history::Entry;
-use phase::{step, Action, Effect, Msg, Phase};
+use phase::{step, Action, Effect, Msg, Phase, AWAY_GAP};
 use state::{load, save, Bell};
 use tab::Tab;
 
@@ -38,6 +38,9 @@ struct Applet {
     editing: Option<(u64, String)>,
     tabs: SingleSelectModel,
     history: Vec<Entry>,
+    history_mtime: Option<SystemTime>,
+    // when the last tick ran: a long gap means the machine slept
+    last_tick: SystemTime,
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +107,8 @@ impl cosmic::Application for Applet {
             editing: None,
             tabs: tab::model(),
             history: Vec::new(),
+            history_mtime: None,
+            last_tick: SystemTime::now(),
         };
         (app, Task::none())
     }
@@ -126,6 +131,9 @@ impl cosmic::Application for Applet {
                 if self.popup == Some(id) {
                     self.popup = None;
                 }
+                // free the history; the next open reloads it
+                self.history = Vec::new();
+                self.history_mtime = None;
                 return Task::none();
             }
             Message::EditPart(unit) => {
@@ -143,11 +151,18 @@ impl cosmic::Application for Applet {
                 return Task::none();
             }
             Message::Tick => {
-                // the Stats tab shows live numbers, so re-read the history each tick
+                // the Stats tab shows live numbers: re-read the history when it changed
                 if self.popup.is_some() && tab::active(&self.tabs) == Tab::Stats {
-                    self.history = history::load();
+                    self.refresh_history();
                 }
-                Msg::Tick
+                // a long gap between ticks means the machine slept; the phase machine ends the focus there
+                let now = SystemTime::now();
+                let last = std::mem::replace(&mut self.last_tick, now);
+                if now.duration_since(last).unwrap_or_default() > AWAY_GAP {
+                    Msg::Away { last_seen: last }
+                } else {
+                    Msg::Tick
+                }
             }
             Message::Do(action) => Msg::Act(action),
             // a value the clock can't hold keeps the editor open to be fixed
@@ -184,7 +199,7 @@ impl cosmic::Application for Applet {
                 move |state: &mut Applet| {
                     let id = Id::unique();
                     state.popup = Some(id);
-                    state.history = history::load();
+                    state.refresh_history();
                     state.tabs.activate_position(0);
                     let mut s = state.core.applet.get_popup_settings(
                         state.core.main_window_id().unwrap(),
@@ -240,9 +255,11 @@ impl cosmic::Application for Applet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        // ponytail: always polls the state file each second (also while idle, to see a
-        // start from another applet instance); switch to inotify if the wakeups matter
-        let tick = time::every(Duration::from_secs(1)).map(|_| Message::Tick);
+        // ponytail: idle polls the state file every 5 s, so a start from another applet
+        // instance shows up within 5 s; 1 s while running or the popup is open
+        let idle = self.phase == Phase::Idle && self.popup.is_none();
+        let tick =
+            time::every(Duration::from_secs(if idle { 5 } else { 1 })).map(|_| Message::Tick);
         if self.editing.is_none() {
             return tick;
         }
@@ -265,6 +282,15 @@ impl cosmic::Application for Applet {
 }
 
 impl Applet {
+    /// Reloads the history only when the file changed since the last load.
+    fn refresh_history(&mut self) {
+        let mtime = history::modified();
+        if mtime != self.history_mtime {
+            self.history = history::load();
+            self.history_mtime = mtime;
+        }
+    }
+
     fn popup_view(&self) -> Element<'_, Message> {
         let read = self.phase.read(SystemTime::now());
         // click a part (h/min/s) to edit it; a break clock isn't editable

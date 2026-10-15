@@ -13,6 +13,9 @@ pub(crate) const BREAK_RATIO: u32 = 5;
 // ponytail: fixed 5-minute lateness nudge, make configurable if it gets annoying
 pub(crate) const LATE_NUDGE: Duration = Duration::from_secs(5 * 60);
 
+// ponytail: a tick gap this long means the machine slept or stalled; idle ticks are 5 s, focus 1 s. Shorter sleeps still count as focus, lower it if that overcounts.
+pub(crate) const AWAY_GAP: Duration = Duration::from_secs(60);
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Phase {
     Idle,
@@ -45,6 +48,10 @@ pub(crate) enum Action {
 pub(crate) enum Msg {
     Act(Action),
     Tick,
+    /// the clock jumped past `AWAY_GAP` after `last_seen`: the machine slept
+    Away {
+        last_seen: SystemTime,
+    },
     /// the user set clock part `unit` (seconds per unit) to `value`
     SetPart {
         unit: u64,
@@ -91,6 +98,35 @@ pub(crate) fn step(
                 None
             }
             // a tick during idle or focus has nothing to say
+            _ => None,
+        },
+        // the machine slept: the focus ends at the last tick it saw and the break
+        // starts there, so the sleep is rest, never focus
+        Msg::Away { last_seen } => match phase {
+            Phase::Focus(start) => {
+                let focus = since(start, last_seen);
+                if focus.is_zero() {
+                    return None;
+                }
+                fx(Effect::Record(Entry::Focus { start, focus }));
+                let brk = break_for(focus);
+                // the whole break passed while asleep: record it taken in full, so
+                // Stop later never sees the sleep as break time
+                if now >= last_seen + brk {
+                    fx(Effect::Record(Entry::Break {
+                        start: last_seen,
+                        earned: brk,
+                        taken: brk,
+                    }));
+                    return Some(Phase::Idle);
+                }
+                fx(Effect::ResetBells);
+                fx(Effect::Notify {
+                    summary: tr().brk,
+                    body: (tr().break_started)(&fmt(focus), &fmt(brk)),
+                });
+                Some(Phase::Break(last_seen, last_seen + brk))
+            }
             _ => None,
         },
         // a break clock is not editable
@@ -176,6 +212,57 @@ mod tests {
         for p in [Phase::Idle, Phase::Focus(at(0))] {
             assert_eq!(run(Msg::Tick, p, at(1000)), (None, vec![]));
         }
+    }
+
+    #[test]
+    fn a_sleep_ends_the_focus_at_the_last_tick_and_starts_the_break_there() {
+        // asleep well past the break: focus stops at 100 s, and the 20 s break is already over
+        let (next, fx) = run(
+            Msg::Away { last_seen: at(100) },
+            Phase::Focus(at(0)),
+            at(5000),
+        );
+        assert_eq!(next, Some(Phase::Idle));
+        assert_eq!(
+            fx,
+            vec![
+                Effect::Record(Entry::Focus {
+                    start: at(0),
+                    focus: d(100),
+                }),
+                Effect::Record(Entry::Break {
+                    start: at(100),
+                    earned: d(20),
+                    taken: d(20),
+                }),
+            ]
+        );
+        // woke inside the break: it keeps running from the sleep moment
+        let (next, _) = run(
+            Msg::Away { last_seen: at(100) },
+            Phase::Focus(at(0)),
+            at(110),
+        );
+        assert_eq!(next, Some(Phase::Break(at(100), at(120))));
+    }
+
+    #[test]
+    fn a_sleep_outside_a_focus_or_with_no_focus_changes_nothing() {
+        for p in [Phase::Idle, Phase::Break(at(0), at(60))] {
+            assert_eq!(
+                run(Msg::Away { last_seen: at(100) }, p, at(5000)),
+                (None, vec![])
+            );
+        }
+        // the focus started after the last tick the machine saw: nothing to end
+        assert_eq!(
+            run(
+                Msg::Away { last_seen: at(0) },
+                Phase::Focus(at(100)),
+                at(5000)
+            ),
+            (None, vec![])
+        );
     }
 
     #[test]

@@ -34,6 +34,9 @@ flow. When you stop, you earn a break of **one fifth** of the time you focused
   ends when you press *End break*.
 - **Notifications** are sent when a break starts, when it ends, and once more if you're still on
   the break 5 minutes later.
+- **Sleep counts as rest:** if the computer sleeps during a focus, the focus ends at the last
+  moment the applet ticked and the break starts then. Sleep is never counted as focus. A break
+  that ran out while asleep is recorded in full. Sleeps under a minute still count as focus.
 - **Multiple monitors:** the COSMIC panel runs one applet process per monitor. They share their
   state through a small file in `$XDG_RUNTIME_DIR` (`$XDG_RUNTIME_DIR/app/<id>` under Flatpak),
   so every panel shows the same timer. The timer survives panel restarts and resets on logout.
@@ -41,8 +44,8 @@ flow. When you stop, you earn a break of **one fifth** of the time you focused
   in a hero card, a grid of tiles for sessions, average, longest, and breaks earned and taken
   (with late breaks), bars for the last seven days of focus, and bars for how the sessions split
   into short (under 25 min), medium and long (50 min or more). Every finished focus and break is appended to `$XDG_DATA_HOME/flowmodoro/history`
-  (`~/.local/share` by default), so the stats survive logout. The Stats tab reads the file each
-  time the popup opens. A focus ended with *Reset* isn't kept.
+  (`~/.local/share` by default), so the stats survive logout. The Stats tab re-reads the file
+  whenever it changes, so it stays live while open. A focus ended with *Reset* isn't kept.
 
 The interface is in English, Brazilian Portuguese and Spanish, picked from the system language
 (`LC_ALL`, `LC_MESSAGES` or `LANG`). To add a language, add a `Tr` table in `src/tr.rs` and a
